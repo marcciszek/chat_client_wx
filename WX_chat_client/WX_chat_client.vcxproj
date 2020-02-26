@@ -22,6 +22,7 @@
     <ClCompile Include="cApp.cpp" />
     <ClCompile Include="ChatBox.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="SettingBox.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cApp.h" />

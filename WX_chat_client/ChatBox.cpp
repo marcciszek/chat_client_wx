@@ -1,12 +1,12 @@
 #include "ChatBox.h"
 
 wxBEGIN_EVENT_TABLE(ChatBox, wxMDIChildFrame)
-EVT_BUTTON(1001, ChatBox::Connect)
-EVT_BUTTON(1002, ChatBox::Disconnect)
-EVT_TEXT_ENTER(1003,ChatBox::OnSend)
-EVT_SOCKET(1004, ChatBox::OnSocketEvent)
-//EVT_MENU(CLIENT_CLOSE, MyFrame::OnCloseConnection)
+EVT_BUTTON(10001, ChatBox::Connect)
+EVT_BUTTON(10002, ChatBox::Disconnect)
+EVT_TEXT_ENTER(10003,ChatBox::OnSend)
+EVT_SOCKET(10004, ChatBox::OnSocketEvent)
 wxEND_EVENT_TABLE();
+
 
 ChatBox::ChatBox(wxMDIParentFrame* parent, wxString sName)
     : wxMDIChildFrame(parent, wxID_ANY, sName, wxPoint(10, 10), wxSize(600, 400))
@@ -14,13 +14,13 @@ ChatBox::ChatBox(wxMDIParentFrame* parent, wxString sName)
 
     //Create chat frame buttons on top
     ToolBar1 = this->CreateToolBar(wxTB_HORIZONTAL, wxID_ANY);
-    ButtonConnect = new wxButton(ToolBar1, 1001, "Connect");
-    ButtonDisconnect = new wxButton(ToolBar1, 1002, "Disconnect");
+    ButtonConnect = new wxButton(ToolBar1, 10001, "Connect");
+    ButtonDisconnect = new wxButton(ToolBar1, 10002, "Disconnect");
     ButtonDisconnect->Enable(false);
-    TextNickName = new wxTextCtrl(ToolBar1, wxID_ANY, "Anonymous");
+    //TextNickName = new wxTextCtrl(ToolBar1, wxID_ANY, "Anonymous");
     ToolBar1->AddControl(ButtonConnect);
     ToolBar1->AddControl(ButtonDisconnect);
-    ToolBar1->AddControl(TextNickName);
+    //ToolBar1->AddControl(TextNickName);
     ToolBar1->Realize();
 
     //Create none editing box for displaying messages
@@ -28,28 +28,30 @@ ChatBox::ChatBox(wxMDIParentFrame* parent, wxString sName)
         wxTE_READONLY| wxTE_MULTILINE);
 
     //Create box for entering user messages
-    TextSend = new wxTextCtrl(this, 1003, "", wxPoint(0, 300), wxSize(500, 50), wxTE_PROCESS_ENTER);
+    TextSend = new wxTextCtrl(this, 10003, "", wxPoint(0, 300), wxSize(500, 50), wxTE_PROCESS_ENTER);
     TextSend->SetMaxLength(4095);
 
-    //Seting up sizer (auto size class)
-    FlexSizer = new wxBoxSizer(wxVERTICAL);
-    FlexSizer->Add(TextRec, 1, wxEXPAND);
-    FlexSizer->Add(TextSend, 0, wxEXPAND);
-    this->SetSizer(FlexSizer);
-    FlexSizer->Layout();
+    //Set up sizer (auto size class)
+    FlexSizerBox = new wxBoxSizer(wxVERTICAL);
+    FlexSizerBox->Add(TextRec, 1, wxEXPAND);
+    FlexSizerBox->Add(TextSend, 0, wxEXPAND);
+    this->SetSizer(FlexSizerBox);
+    FlexSizerBox->Layout();
+    this->CenterOnScreen();
+
+    //Create and show settings box
+    SettingBox* SetBox = new SettingBox(this, &AdressIp, &AdressPort, &ClientName);
+    delete SetBox;
 
     //Set up connection
     sock = new wxSocketClient(wxSOCKET_NOWAIT);
-    sock->SetEventHandler(*this, 1004);
+    sock->SetEventHandler(*this, 10004);
     sock->SetNotify(wxSOCKET_INPUT_FLAG | wxSOCKET_CONNECTION_FLAG | wxSOCKET_LOST_FLAG);
     sock->Notify(true);
-
 }
 
 ChatBox::~ChatBox()
 {
-    //delete ButtonConnect;
-    //delete ButtonDisconnect;
     delete ToolBar1;
     delete TextRec;
     delete TextSend;
@@ -60,8 +62,8 @@ void ChatBox::Connect(wxCommandEvent& WXUNUSED(evt))
 {
     wxIPV4address addr;
     //addr.AnyAddress();
-    addr.Hostname("localhost");
-    addr.Service(54000);
+    addr.Hostname(AdressIp);
+    addr.Service(AdressPort);
     TextRec->AppendText(wxString::Format(wxT("Trying to connect to %s:%u \n"),
         addr.IPAddress(), addr.Service()));
 
@@ -84,15 +86,15 @@ void ChatBox::OnSend(wxCommandEvent& WXUNUSED(evt))
 {
     wxString str = TextSend->GetLineText(0);
     size_t txn = str.length();
-
-    sock->Write(str, txn + 1);
-
+    if (txn > 0)
+    {
+        sock->Write(str, txn );
+    }
     TextSend->Clear();
 }
 
 void ChatBox::OnSocketEvent(wxSocketEvent& evt)
 {
-    //TextRec->AppendText(wxT("OnSocketEvent: "));
     switch (evt.GetSocketEvent())
     {
     case wxSOCKET_CONNECTION:
@@ -110,9 +112,10 @@ void ChatBox::OnSocketEvent(wxSocketEvent& evt)
     case wxSOCKET_INPUT:
     {
         char buff[4096];
-        sock->Read(&buff, 4095); //TD check if read ok
+        //ZeroMemory(buff, 4096);
+        sock->Read(&buff, 4094); //TD check if read ok
         TextRec->AppendText(buff);
-        TextRec->AppendText('\n');
+        TextRec->AppendText("\n");
     }
     default:;
     }
